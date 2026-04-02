@@ -1,4 +1,4 @@
-# Data 2205 Final Project: Bus Stops
+# Data 205 Final Project: Bus Stops
 ### Author: ***Grace Sampson***
 
 ### Overview
