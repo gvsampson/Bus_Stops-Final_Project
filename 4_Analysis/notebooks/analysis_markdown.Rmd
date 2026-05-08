@@ -1,0 +1,52 @@
+---
+title: "Analysis"
+author: "Grace Sampson"
+date: "2026-05-08"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(openintro)
+library(tidymodels)
+```
+
+```{r}
+setwd("~/Data 205/final-project")
+bus_stops_clean <- read.csv("bus_stops_clean.csv")
+```
+
+
+## Chi-squared test
+
+```{r}
+amenities <- c("total_benches", "total_shelters", "total_trash_cans")
+
+results <- map_dfr(amenities, function(col) {
+  tbl <- table(
+    bus_stops_clean$type,
+    bus_stops_clean[[col]] > 0
+  )
+  test <- chisq.test(tbl)
+  tibble(
+    amenity   = col,
+    chi_sq    = round(test$statistic, 2),
+    df        = test$parameter,
+    p_value   = test$p.value,
+    p_bonf    = min(test$p.value * 3, 1)  # Bonferroni correction for 3 tests
+  )
+})
+
+results
+```
+
+
+
+
+
+
+
+
+
+
+
