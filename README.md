@@ -5,7 +5,8 @@
 This project analyzes bus stop infrastructure in the Montgomery County. It's designed to identify areas of lacking infrastructure and suggest specific bus stops to be improved in order to reduce the distance someone has to walk to find a bus stop with a bench. 
 
 ### Tools Used
-- Python (Google Colab)
+- R (RStudio) for ingestion, eda and analysis
+- Python (Google Colab) for modelling
 - Nearest Neighbors Model
 
 ### Project Structure
