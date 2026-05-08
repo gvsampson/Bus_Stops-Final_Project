@@ -1,0 +1,82 @@
+---
+title: "ingestion"
+author: "Grace Sampson"
+date: "2026-04-16"
+output: html_document
+---
+
+## Cleaning Main Data (bus_stops)
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+# Load in data
+setwd("~/Data 205/final-project")
+bus_stops <- read.csv("Bus_Stops_20260223.csv")
+```
+
+
+```{r}
+head(bus_stops)
+```
+
+```{r}
+# Make variables lowercase and replace periods with underscores
+bus_stops_clean <- bus_stops |>
+  rename_with(~ tolower(gsub(".", "_", .x, fixed = TRUE)))
+```
+
+
+```{r}
+# Remove commas from numeric entries
+bus_stops_clean$objectid <- gsub(",", "", bus_stops_clean$objectid)
+bus_stops_clean$stop_id <- gsub(",", "", bus_stops_clean$stop_id)
+bus_stops_clean$stop_code <- gsub(",", "", bus_stops_clean$stop_code)
+```
+
+```{r}
+head(bus_stops_clean)
+```
+
+```{r}
+# Create new column to indicate metro and rideOn bus stops
+library(stringr)
+bus_stops_clean <- bus_stops_clean |>
+  mutate(type = if_else(str_detect(routes, "[MDP]\\d"), "Metro", "RideOn"))
+```
+
+```{r}
+bus_stops_clean |>
+  count(type)
+```
+
+
+## Clean External Data (rideon_stops)
+
+```{r}
+# Clean variable names and change stop_code type for joining
+rideon_stops <- read.csv("Montgomery_County_Ride_On_Stops.csv") |>
+  rename_with(tolower) |>
+  mutate(stop_code = as.character(stop_code))
+head(rideon_stops)
+```
+
+
+```{r}
+write.csv(rideon_stops, "rideon_stops.csv", row.names = FALSE)
+```
+
+
+```{r}
+# Join datasets
+bus_stops_clean <- left_join(bus_stops_clean, rideon_stops, by = "stop_code")
+```
+
+
+```{r}
+write.csv(bus_stops_clean, "bus_stops_clean.csv", row.names = FALSE)
+```
+
+
