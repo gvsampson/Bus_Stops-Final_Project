@@ -1,0 +1,103 @@
+---
+title: "EDA"
+author: "Grace Sampson"
+date: "2026-05-08"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+setwd("~/Data 205/final-project")
+bus_stops_clean <- read.csv("bus_stops_clean.csv")
+```
+
+
+### Graph 1
+
+```{r}
+bus_stops_clean |>
+  filter(!is.na(town), town != "") |>
+  mutate(has_bench = if_else(total_benches > 0, "Yes", "No")) |>
+  ggplot(aes(y = town, fill = has_bench)) +
+  geom_bar(position = "fill") +
+  scale_x_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Bus Stops with at Least One Bench by Town",
+    x = "Proportion", y = "Town", fill = "Has Bench",
+    caption = "data: bus_stops_clean.csv"
+  ) + theme_bw() + scale_fill_manual(values = c("Yes" = "#377EB8", "No" = "#B3B3B3"))
+```
+
+
+### Graph 2
+
+```{r}
+bus_stops_clean |>
+  filter(!is.na(town), town != "") |>
+  count(town, type) |>
+  ggplot(aes(x = n, y = reorder(town, n, sum), fill = type)) +
+  geom_col() +
+  labs(
+    title = "Number of Bus Stops per Town by Route Type",
+    x = "Number of Stops", y = "Town", fill = "Type",
+    caption = "bus_stops_clean.csv"
+  ) + theme_bw() +scale_fill_manual(values = c("RideOn" = "#377EB8", "Metro" = "#E41A1C"))
+```
+
+
+### Graph 3
+
+```{r}
+bus_stops_clean |>
+  mutate(
+    Bench = if_else(total_benches > 0, "Yes", "No"),
+    Shelter = if_else(total_shelters > 0, "Yes", "No"),
+    `Trash Can`= if_else(total_trash_cans > 0, "Yes", "No")
+  ) |>
+  pivot_longer(c(Bench, Shelter, `Trash Can`), names_to = "amenity", values_to = "present") |>
+  ggplot(aes(x = amenity, fill = present)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~ type) +
+  labs(
+    title = "Amenity Availability by Route Type",
+    x = "Amenity", y = "Proportion", fill = "Present",
+    caption = "data: bus_stops_clean.csv"
+  ) + theme_bw() + scale_fill_manual(values = c("Yes" = "#377EB8", "No" = "#B3B3B3"))
+```
+
+
+### Graph 4
+
+```{r}
+bus_stops_clean |>
+  filter(!is.na(town), town != "") |>
+  group_by(town) |>
+  summarise(
+    n_stops      = n(),
+    pct_bench    = mean(total_benches > 0),
+    pct_shelter  = mean(total_shelters > 0),
+    pct_trash    = mean(total_trash_cans > 0)
+  ) |>
+  pivot_longer(c(pct_bench, pct_shelter, pct_trash),
+               names_to = "amenity", values_to = "proportion",
+               names_prefix = "pct_") |>
+  mutate(amenity = recode(amenity,
+    bench   = "Bench",
+    shelter = "Shelter",
+    trash   = "Trash Can"
+  )) |>
+  ggplot(aes(x = n_stops, y = proportion)) +
+  geom_point() +
+  geom_text(aes(label = town), size = 2.5, vjust = -0.6, check_overlap = TRUE) +
+  scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~ amenity) +
+  labs(
+    title = "Amenity Availability vs. Stop Count by Town",
+    x = "Number of Stops", y = "% of Stops with Amenity",
+    caption = "data: bus_stops_clean.csv"
+  ) + theme_bw() 
+```
