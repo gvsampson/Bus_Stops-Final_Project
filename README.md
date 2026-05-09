@@ -6,8 +6,7 @@ This project analyzes bus stop infrastructure in the Montgomery County. It's des
 
 ### Tools Used
 - R (RStudio) for ingestion, eda and analysis
-- Python (Google Colab) for modelling
-- Nearest Neighbors Model
+- Nearest Neighbors
 
 ### Project Structure
 
@@ -15,6 +14,5 @@ This repository follows a structured data science workflow:
 - data/ -> raw and processed datasets
 - ingestion/ -> data loading and cleaning
 - eda/ -> exploratory data analysis
-- analysis/ -> hypothesis and Anova testing
-- model/ -> Nearest Neighbors model
+- analysis/ -> Chi-squared testing and Nearest Neighbors analysis
 - reports/ -> final outputs and presentations
