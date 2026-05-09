@@ -41,12 +41,148 @@ results
 ```
 
 
+```{r}
+# save chi-squared results as png
+library(gt)
+library(webshot2)
+results |>
+  gt() |>
+  gtsave("chi_sq_results.png")
+```
 
 
 
+## Nearest Neighbors Analysis
 
 
+```{r}
+# Get bottom 2 towns that have at least 2 bench stops
+low_bench_towns <- bus_stops_clean |>
+  filter(!is.na(town), town != "", !is.na(stop_lat), !is.na(stop_lon)) |>
+  group_by(town) |>
+  summarise(
+    n_stops    = n(),
+    n_bench    = sum(total_benches > 0),
+    bench_rate = mean(total_benches > 0)
+  ) |>
+  filter(n_stops >= 20, n_bench >= 2) |>
+  slice_min(bench_rate, n = 2)
+
+low_bench_towns
+```
 
 
+```{r}
+# Find average distance between bus stops with benches using Nearest Neighbors in two towns with the lowest bench rates
 
+library(sf)
+# Filter to bench-equipped stops in the two towns
+bench_stops <- bus_stops_clean |>
+  filter(
+    town %in% low_bench_towns$town,
+    total_benches > 0,
+    !is.na(stop_lat), !is.na(stop_lon)
+  )
+
+# Convert to sf, project to UTM zone 18N (meters) for Maryland
+bench_sf <- bench_stops |>
+  st_as_sf(coords = c("stop_lon", "stop_lat"), crs = 4326) |>
+  st_transform(32618)
+
+# For each town, compute average nearest neighbor distance
+bench_sf |>
+  group_by(town) |>
+  group_map(~ {
+    dists <- st_distance(.x, .x)
+    diag(dists) <- NA  # exclude self-distance
+    avg_nn_dist <- mean(apply(dists, 1, min, na.rm = TRUE))
+    tibble(town = .y$town, n_bench_stops = nrow(.x),
+           avg_nn_m  = round(avg_nn_dist, 1),
+           avg_nn_km = round(avg_nn_dist / 1000, 3))
+  }) |>
+  bind_rows()
+```
+
+
+```{r}
+# Do the same for all towns
+
+# Bench rates
+bench_rates <- bus_stops_clean |>
+  filter(!is.na(town), town != "", !is.na(stop_lat), !is.na(stop_lon)) |>
+  group_by(town) |>
+  summarise(
+    n_stops    = n(),
+    n_bench    = sum(total_benches > 0),
+    bench_rate = mean(total_benches > 0)
+  ) |>
+  filter(n_bench >= 2)  # need at least 2 bench stops to compute distance
+
+# Compute avg nearest neighbor distance per town
+nn_results <- bus_stops_clean |>
+  filter(
+    town %in% bench_rates$town,
+    total_benches > 0,
+    !is.na(stop_lat), !is.na(stop_lon)
+  ) |>
+  st_as_sf(coords = c("stop_lon", "stop_lat"), crs = 4326) |>
+  st_transform(32618) |>
+  group_by(town) |>
+  group_map(~ {
+    dists <- st_distance(.x, .x)
+    diag(dists) <- NA
+    tibble(
+      town = .y$town,
+      avg_nn_km = mean(apply(dists, 1, min, na.rm = TRUE)) / 1000
+    )
+  }) |>
+  bind_rows()
+
+# Join with bench rates
+nn_results <- nn_results |>
+  left_join(bench_rates, by = "town")
+
+nn_results
+```
+
+
+```{r}
+ggplot(nn_results, aes(x = bench_rate, y = avg_nn_km)) +
+  geom_point(aes(size = n_stops)) +
+  geom_text(aes(label = town), size = 2.8, vjust = -0.7, check_overlap = TRUE) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(
+    title = "Bench Rate vs. Average Nearest Neighbor Distance Between Bench Stops",
+    x = "Bench Rate (% of stops with bench)",
+    y = "Avg Nearest Neighbor Distance (km)",
+    size = "Total Stops"
+  )
+```
+
+
+```{r}
+library(leaflet)
+
+clarksburg <- bus_stops_clean |>
+  filter(town == "Clarksburg", !is.na(stop_lat), !is.na(stop_lon)) |>
+  mutate(has_bench = total_benches > 0)
+
+leaflet(clarksburg) |>
+  addTiles() |>
+  addCircleMarkers(
+    lng = ~stop_lon, lat = ~stop_lat,
+    color = ~ifelse(has_bench, "#2E86AB", "#E84855"),
+    radius = 6,
+    stroke = FALSE,
+    fillOpacity = 0.85,
+    popup = ~paste0("<b>", stop_name, "</b><br>Benches: ", total_benches,
+                    "<br>Routes: ", routes)
+  ) |>
+  addLegend(
+    position = "bottomright",
+    colors  = c("#2E86AB", "#E84855"),
+    labels  = c("Has Bench", "No Bench"),
+    title   = "Clarksburg Bus Stops"
+  )
+```
 
